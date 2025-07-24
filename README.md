@@ -1,4 +1,25 @@
-# MachineWise IoT Dashboard
+# MachineWise IoT Dashboard - Phase 2
+
+Built a real-time dashboard for monitoring industrial machine sensors with advanced features including database persistence, real-time WebSocket streaming, and historical data analysis.
+
+**🚀 Live Demo:** https://machinewise-d9g8cwe3e0ardzhh.eastus-01.azurewebsites.net/
+
+## Phase 2 Features Added
+
+**Backend Enhancements:**
+- MongoDB integration for sensor data persistence
+- Socket.io for real-time data streaming (replaced polling)
+- CRUD operations for sensor management
+- Historical data APIs with time-based filtering
+- MQTT integration for sensor value streaming (BONUS)
+
+**Frontend Additions:**
+- Sensor management page (add/edit/delete sensors)
+- Historical data viewer with date range filtering
+- Real-time WebSocket connection instead of API polling
+- Enhanced UI for sensor configuration
+
+## What's InsideneWise IoT Dashboard
 
 Built a real-time dashboard for monitoring industrial machine sensors. Has a landing page and dashboard with live data updates.
 

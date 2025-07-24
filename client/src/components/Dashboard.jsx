@@ -1,39 +1,43 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-
-import { getSensorDataAPI } from '../api/index.js'
+import socketService from '../services/socketService.js'
 
 const Dashboard = () => {
   const [sensorData, setSensorData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
-
-  const fetchSensorData = async () => {
-    try {
-      const responsedata = await getSensorDataAPI();
-      const result = responsedata?.data;
-      
-      if (result.success && result.data) {
-        setSensorData(result.data)
-        setLastUpdate(new Date())
-        setError(null)
-      } else {
-        throw new Error(result.message || 'Invalid response format')
-      }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    fetchSensorData()
-    
-    const interval = setInterval(fetchSensorData, 5000)
-    
-    return () => clearInterval(interval)
+    const socket = socketService.connect()
+
+    socket.on('connect', () => {
+      setIsConnected(true)
+      setError(null)
+    })
+
+    socket.on('disconnect', () => {
+      setIsConnected(false)
+    })
+
+    socketService.onSensorData((data) => {
+      setSensorData(data)
+      setLastUpdate(new Date())
+      setError(null)
+      setLoading(false)
+    })
+
+    socketService.onSensorError((errorData) => {
+      setError(errorData.message)
+      setLoading(false)
+    })
+
+    socketService.requestSensorData()
+
+    return () => {
+      socketService.disconnect()
+    }
   }, [])
 
   const getStatusColor = (status) => {
@@ -45,11 +49,8 @@ const Dashboard = () => {
     }
   }
 
-  const getSensorColor = (value, threshold, sensorType) => {
-    if (sensorType === 'temperature' && value > threshold) return 'text-red-600'
-    if (sensorType === 'vibration' && value > threshold) return 'text-red-600'
-    if (sensorType === 'current' && value > threshold) return 'text-orange-600'
-    if (sensorType === 'voltage' && value > threshold) return 'text-orange-600'
+  const getSensorColor = (sensor) => {
+    if (sensor.isAlert) return 'text-red-600'
     return 'text-gray-800'
   }
 
@@ -58,7 +59,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <div className="text-xl">Loading dashboard...</div>
+          <div className="text-xl">Connecting to real-time data...</div>
         </div>
       </div>
     )
@@ -73,10 +74,11 @@ const Dashboard = () => {
               MachineWise
             </Link>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-600">Industrial IoT Dashboard</span>
+              <Link to="/sensors" className="text-gray-600 hover:text-gray-800 cursor-pointer">Manage Sensors</Link>
+              <Link to="/historical" className="text-gray-600 hover:text-gray-800 cursor-pointer">Historical Data</Link>
               <Link 
                 to="/" 
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
               >
                 Back to Home
               </Link>
@@ -92,20 +94,24 @@ const Dashboard = () => {
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Real-time Machine Monitoring
               </h1>
-              <p className="text-gray-600">Live sensor data and machine health status</p>
+              <p className="text-gray-600">Live sensor data via WebSocket connection</p>
             </div>
-            {lastUpdate && (
-              <div className="text-right">
-                <div className="text-sm text-gray-500 mb-1">Last updated</div>
-                <div className="text-lg font-semibold text-gray-700">
-                  {lastUpdate.toLocaleTimeString()}
-                </div>
-                <div className="flex items-center mt-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                  <span className="text-sm text-green-600">Live</span>
-                </div>
+            <div className="text-right">
+              <div className="flex items-center mb-2">
+                <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                <span className={`text-sm ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
               </div>
-            )}
+              {lastUpdate && (
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Last updated</div>
+                  <div className="text-lg font-semibold text-gray-700">
+                    {lastUpdate.toLocaleTimeString()}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -133,81 +139,38 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700">Temperature</h3>
-                  <div className="text-3xl">🌡️</div>
+              {sensorData.sensors && sensorData.sensors.map((sensor, index) => (
+                <div key={sensor.id || index} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-700">{sensor.name}</h3>
+                    <div className="text-3xl">
+                      {sensor.type === 'temperature' && '🌡️'}
+                      {sensor.type === 'vibration' && '📳'}
+                      {sensor.type === 'current' && '⚡'}
+                      {sensor.type === 'voltage' && '🔌'}
+                    </div>
+                  </div>
+                  <div className={`text-3xl font-bold mb-2 ${getSensorColor(sensor)}`}>
+                    {sensor.value}{sensor.unit}
+                  </div>
+                  <div className="text-sm text-gray-500 mb-2">
+                    Threshold: {sensor.threshold}{sensor.unit}
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${sensor.isAlert ? 'bg-red-500' : 'bg-green-500'}`}
+                      style={{ 
+                        width: `${Math.min((sensor.value / (sensor.threshold * 1.5)) * 100, 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                  {sensor.isAlert && (
+                    <div className="mt-2 text-sm text-red-600 font-medium">
+                      ⚠️ Alert: Above threshold
+                    </div>
+                  )}
                 </div>
-                <div className={`text-3xl font-bold mb-2 ${getSensorColor(sensorData.sensors.temperature, sensorData.thresholds.temperature, 'temperature')}`}>
-                  {sensorData.sensors.temperature}°C
-                </div>
-                <div className="text-sm text-gray-500 mb-2">
-                  Threshold: {sensorData.thresholds.temperature}°C
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${sensorData.sensors.temperature > sensorData.thresholds.temperature ? 'bg-red-500' : 'bg-green-500'}`}
-                    style={{ width: `${Math.min((sensorData.sensors.temperature / 100) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700">Vibration</h3>
-                  <div className="text-3xl">📳</div>
-                </div>
-                <div className={`text-3xl font-bold mb-2 ${getSensorColor(sensorData.sensors.vibration, sensorData.thresholds.vibration, 'vibration')}`}>
-                  {sensorData.sensors.vibration} mm/s
-                </div>
-                <div className="text-sm text-gray-500 mb-2">
-                  Threshold: {sensorData.thresholds.vibration} mm/s
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${sensorData.sensors.vibration > sensorData.thresholds.vibration ? 'bg-red-500' : 'bg-green-500'}`}
-                    style={{ width: `${Math.min((sensorData.sensors.vibration / 30) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700">Current</h3>
-                  <div className="text-3xl">⚡</div>
-                </div>
-                <div className={`text-3xl font-bold mb-2 ${getSensorColor(sensorData.sensors.current, sensorData.thresholds.current, 'current')}`}>
-                  {sensorData.sensors.current} A
-                </div>
-                <div className="text-sm text-gray-500 mb-2">
-                  Threshold: {sensorData.thresholds.current} A
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${sensorData.sensors.current > sensorData.thresholds.current ? 'bg-orange-500' : 'bg-green-500'}`}
-                    style={{ width: `${Math.min((sensorData.sensors.current / 20) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700">Voltage</h3>
-                  <div className="text-3xl">🔌</div>
-                </div>
-                <div className={`text-3xl font-bold mb-2 ${getSensorColor(sensorData.sensors.voltage, sensorData.thresholds.voltage, 'voltage')}`}>
-                  {sensorData.sensors.voltage} V
-                </div>
-                <div className="text-sm text-gray-500 mb-2">
-                  Threshold: {sensorData.thresholds.voltage} V
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${sensorData.sensors.voltage > sensorData.thresholds.voltage ? 'bg-orange-500' : 'bg-green-500'}`}
-                    style={{ width: `${Math.min((sensorData.sensors.voltage / 300) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
+              ))}
             </div>
 
             {sensorData.alerts && sensorData.alerts.length > 0 && (

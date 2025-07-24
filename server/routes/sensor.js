@@ -1,13 +1,21 @@
 import express from 'express';
-
-import { generateSensorData } from '../controller/sensorController.js';
+import { 
+    getAllSensors, 
+    createSensor, 
+    updateSensor, 
+    deleteSensor, 
+    getSensorData,
+    getHistoricalData 
+} from '../controller/sensorController.js';
 
 const router = express.Router();
 
-router.get('/sensor-data', generateSensorData);
+router.get('/sensors', getAllSensors);
+router.post('/sensors', createSensor);
+router.put('/sensors/:id', updateSensor);
+router.delete('/sensors/:id', deleteSensor);
 
-router.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+router.get('/sensor-data', getSensorData);
+router.get('/sensors/historical', getHistoricalData);
 
 export default router;

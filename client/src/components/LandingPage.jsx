@@ -10,7 +10,7 @@ const LandingPage = () => {
           <div className="text-white text-2xl font-bold">MachineWise</div>
           <Link
             to="/dashboard"
-            className="bg-white text-blue-900 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+            className="bg-white text-blue-900 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors cursor-pointer"
           >
             Go to Dashboard
           </Link>
@@ -38,7 +38,7 @@ const LandingPage = () => {
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
               <Link
                 to="/dashboard"
-                className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors inline-flex items-center justify-center"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors inline-flex items-center justify-center cursor-pointer"
               >
                 View Live Dashboard
                 <svg
@@ -56,7 +56,7 @@ const LandingPage = () => {
                 </svg>
               </Link>
               <button
-                className="border-2 border-white text-white hover:bg-white hover:text-blue-900 px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
+                className="border-2 border-white text-white hover:bg-white hover:text-blue-900 px-8 py-4 rounded-lg font-semibold text-lg transition-colors cursor-pointer"
                 onClick={() =>  window.open("https://machinewise.in/","_blank")}
               >
                 Learn More
