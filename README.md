@@ -2,8 +2,6 @@
 
 Built a real-time dashboard for monitoring industrial machine sensors with advanced features including database persistence, real-time WebSocket streaming, and historical data analysis.
 
-**🚀 Live Demo:** https://machinewise-d9g8cwe3e0ardzhh.eastus-01.azurewebsites.net/
-
 ## Phase 2 Features Added
 
 **Backend Enhancements:**
@@ -22,8 +20,6 @@ Built a real-time dashboard for monitoring industrial machine sensors with advan
 ## What's InsideneWise IoT Dashboard
 
 Built a real-time dashboard for monitoring industrial machine sensors. Has a landing page and dashboard with live data updates.
-
-**Live Demo:** https://machinewise-d9g8cwe3e0ardzhh.eastus-01.azurewebsites.net/
 
 ## What's Inside
 
@@ -53,7 +49,7 @@ server/          - Node.js backend
 
 ## Running It
 
-**Live Demo:** https://machinewise-d9g8cwe3e0ardzhh.eastus-01.azurewebsites.net/
+
 
 **Local Development:**
 ```bash
